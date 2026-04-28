@@ -44,14 +44,21 @@ cat <<EOF
 next steps (Hammerspoon):
 
   1. open Hammerspoon once and grant accessibility permission.
-  2. wire up init.lua. recommended (non-destructive) approach:
+  2. expose the module to Hammerspoon:
        mkdir -p ~/.hammerspoon
-       echo 'require("scpaste")' >> ~/.hammerspoon/init.lua
        ln -sfn "${PROJECT_DIR}/init.lua" ~/.hammerspoon/scpaste.lua
-  3. edit ${PROJECT_DIR}/init.lua and replace the placeholder hosts.
+  3. add this to your ~/.hammerspoon/init.lua (edit hosts + hotkey to taste):
+
+       local scpaste = require("scpaste")
+       scpaste.hosts = {
+         { text = "user@host-a", subText = "host-a" },
+         { text = "user@host-b", subText = "host-b" },
+       }
+       scpaste.bind({ "alt", "shift" }, "v")
+
   4. Hammerspoon menu -> Reload Config.
-  5. copy an image, hit Cmd+Shift+V, pick a host, then Cmd+V in your terminal.
+  5. copy an image, hit your hotkey, pick a host, then Cmd+V in your terminal.
 
 test the CLI directly:
-  scpaste --host <your-ssh-alias> --dry-run
+  scpaste --host <user@host-or-ssh-alias> --dry-run
 EOF
