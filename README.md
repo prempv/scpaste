@@ -32,7 +32,7 @@ Idempotent.
 
 ```sh
 scpaste --host my-dev-box
-scpaste --host my-dev-box --remote-dir /home/prem/scratch
+scpaste --host my-dev-box --remote-dir /home/you/scratch
 scpaste --host my-dev-box --dry-run
 ```
 
