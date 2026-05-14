@@ -5,7 +5,7 @@ set -euo pipefail
 # selection from Finder) to a remote host's tmp dir, and put the remote
 # path(s) back on the local clipboard.
 
-SCPASTE_VERSION="0.2.0"
+SCPASTE_VERSION="0.2.1"
 
 HOST=""
 REMOTE_DIR="/tmp"
@@ -95,7 +95,44 @@ push_one() {
   printf '%s' "$remote"
 }
 
-# --- try image bitmap first ------------------------------------------------
+# --- try file URLs on the pasteboard first ---------------------------------
+# (Finder copies put both a file URL and a preview-thumbnail bitmap on the
+# pasteboard; the file URL is almost always what the user actually wants.)
+
+FILES_RAW="$(clipboard_files || true)"
+
+FILES=()
+while IFS= read -r line; do
+  [[ -z "$line" ]] && continue
+  FILES+=("$line")
+done <<< "$FILES_RAW"
+
+if [[ ${#FILES[@]} -gt 0 ]]; then
+  REMOTES=()
+  for f in "${FILES[@]}"; do
+    if [[ ! -e "$f" ]]; then
+      echo "skipping (missing): $f" >&2
+      continue
+    fi
+    if r="$(push_one "$f")"; then
+      REMOTES+=("$r")
+    else
+      exit 1
+    fi
+  done
+
+  if [[ ${#REMOTES[@]} -eq 0 ]]; then
+    echo "nothing transferred" >&2
+    exit 1
+  fi
+
+  joined="$(printf '%s\n' "${REMOTES[@]}")"
+  printf '%s' "$joined" | pbcopy
+  printf '%s\n' "${REMOTES[@]}"
+  exit 0
+fi
+
+# --- fall back to image bitmap (screenshots, Cmd+C in Preview, etc.) -------
 
 PNGPASTE="$(resolve_pngpaste)"
 LOCAL_PNG="$(mktemp -t scpaste).png"
@@ -119,39 +156,5 @@ if [[ -n "$PNGPASTE" ]] && "$PNGPASTE" "$LOCAL_PNG" 2>/dev/null && [[ -s "$LOCAL
   exit 0
 fi
 
-# --- fall back to file URLs on the pasteboard ------------------------------
-
-FILES_RAW="$(clipboard_files || true)"
-
-FILES=()
-while IFS= read -r line; do
-  [[ -z "$line" ]] && continue
-  FILES+=("$line")
-done <<< "$FILES_RAW"
-
-if [[ ${#FILES[@]} -eq 0 ]]; then
-  echo "No image or file on clipboard" >&2
-  exit 1
-fi
-
-REMOTES=()
-for f in "${FILES[@]}"; do
-  if [[ ! -e "$f" ]]; then
-    echo "skipping (missing): $f" >&2
-    continue
-  fi
-  if r="$(push_one "$f")"; then
-    REMOTES+=("$r")
-  else
-    exit 1
-  fi
-done
-
-if [[ ${#REMOTES[@]} -eq 0 ]]; then
-  echo "nothing transferred" >&2
-  exit 1
-fi
-
-joined="$(printf '%s\n' "${REMOTES[@]}")"
-printf '%s' "$joined" | pbcopy
-printf '%s\n' "${REMOTES[@]}"
+echo "No image or file on clipboard" >&2
+exit 1
